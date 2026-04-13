@@ -1,0 +1,510 @@
+/* ═══════════════════════════════════════════
+   AERO — style.css
+   Mobile-first CSS with landscape enforcement
+═══════════════════════════════════════════ */
+
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0e1a;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  color: #e0e8ff;
+  touch-action: none; /* Prevent browser scroll/zoom on touch */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Portrait-Mode Lockout ──────────────────
+   Uses CSS media query — no JS required.
+   @media (orientation: portrait) shows the overlay.
+   The JS version handles edge cases.
+─────────────────────────────────────────── */
+#portrait-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0a0e1a;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+@media (orientation: portrait) {
+  #portrait-overlay { display: flex; }
+}
+.portrait-content { text-align: center; padding: 2rem; }
+.rotate-icon {
+  font-size: 5rem;
+  display: block;
+  animation: rotate-anim 2s ease-in-out infinite;
+  color: #4fc3f7;
+}
+@keyframes rotate-anim {
+  0%,100% { transform: rotate(0deg); }
+  50%      { transform: rotate(90deg); }
+}
+.portrait-content p { font-size: 1.2rem; margin-top: 1rem; color: #aab; }
+
+/* ── Screens ───────────────────────────────
+   Only the `.active` screen is visible.
+─────────────────────────────────────────── */
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.screen.active { display: flex; align-items: center; justify-content: center; }
+#screen-game.active { display: block; } /* Game uses full area */
+
+/* ── Menu Screen ── */
+.menu-bg-canvas-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+#menu-canvas { width: 100%; height: 100%; }
+
+.menu-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 1rem;
+}
+.game-title {
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: #4fc3f7;
+  text-shadow: 0 0 30px #4fc3f7, 0 0 60px #4fc3f780;
+  animation: title-pulse 3s ease-in-out infinite;
+}
+@keyframes title-pulse {
+  0%,100% { text-shadow: 0 0 20px #4fc3f7, 0 0 40px #4fc3f780; }
+  50%      { text-shadow: 0 0 40px #4fc3f7, 0 0 80px #4fc3f7; }
+}
+.game-subtitle {
+  font-size: clamp(0.7rem, 3vw, 1rem);
+  letter-spacing: 0.5em;
+  color: #7986cb;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+}
+.menu-buttons { display: flex; flex-direction: column; gap: 0.75rem; align-items: center; }
+.version { margin-top: 1.5rem; font-size: 0.7rem; color: #445; }
+
+/* ── Panels (Lobby, Settings, etc.) ── */
+.panel {
+  background: rgba(10, 14, 30, 0.95);
+  border: 1px solid #1e3a5a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: min(480px, 95vw);
+  max-height: 95vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  backdrop-filter: blur(10px);
+}
+.panel h2 {
+  text-align: center;
+  font-size: 1.5rem;
+  color: #4fc3f7;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+  min-width: 160px;
+  text-transform: uppercase;
+}
+.btn:active { transform: scale(0.95); opacity: 0.85; }
+.btn-primary  { background: #1976d2; color: #fff; }
+.btn-secondary{ background: #37474f; color: #fff; }
+.btn-accent   { background: #00897b; color: #fff; }
+.btn-outline  { background: transparent; border: 2px solid #4fc3f7; color: #4fc3f7; }
+.btn-small    { padding: 0.4rem 1rem; font-size: 0.8rem; min-width: auto; }
+
+/* ── Input fields ── */
+input[type="text"] {
+  background: #0d1b2a;
+  border: 2px solid #1e3a5a;
+  border-radius: 8px;
+  color: #e0e8ff;
+  font-size: 1.5rem;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  outline: none;
+  width: 100%;
+}
+input[type="text"]:focus { border-color: #4fc3f7; }
+
+/* ── Color Swatches ── */
+.color-picker-section, .mode-section, .team-section, .players-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.color-picker-section label, .mode-section label,
+.team-section label, .players-list-section label { font-size: 0.85rem; color: #aab; }
+.color-swatches {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.swatch {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.swatch:active { transform: scale(0.9); }
+.swatch.selected { border-color: #fff; transform: scale(1.15); }
+
+/* ── Room code box ── */
+.room-code-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #0d1b2a;
+  border: 2px dashed #4fc3f7;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+.room-code-box strong {
+  font-size: 1.8rem;
+  letter-spacing: 0.3em;
+  color: #4fc3f7;
+}
+
+/* ── Player list ── */
+#players-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+#players-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: #0d1b2a;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.player-dot { width: 12px; height: 12px; border-radius: 50%; }
+.player-ready-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #2ecc71;
+}
+
+/* ── Mode buttons ── */
+.mode-buttons { display: flex; gap: 0.5rem; }
+.mode-btn { background: #1e3a5a; color: #aab; }
+.mode-btn.active-mode { background: #1976d2; color: #fff; }
+.mode-desc { font-size: 0.75rem; color: #667; }
+
+/* ── Settings ── */
+.settings-panel { gap: 1.25rem; }
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.setting-row > label { font-size: 0.85rem; color: #aab; }
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.slider-row span { font-size: 0.75rem; color: #667; }
+input[type="range"] {
+  flex: 1;
+  accent-color: #4fc3f7;
+  height: 6px;
+}
+.setting-value { font-size: 0.9rem; color: #4fc3f7; font-weight: bold; }
+.hint { font-size: 0.75rem; color: #556; }
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #1e3a5a;
+  border-radius: 28px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 22px; height: 22px;
+  left: 3px; top: 3px;
+  background: #4fc3f7;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #1976d2; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
+
+/* ── Lobby actions ── */
+.lobby-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+
+/* ── Game Canvas ── */
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #0a0e1a;
+}
+
+/* ── HUD ── */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* Let canvas receive touch by default */
+  z-index: 100;
+}
+/* Re-enable pointer on actual interactive HUD elements */
+.hud-action-btn, #btn-pause-settings { pointer-events: auto; }
+
+/* Score / kill feed */
+#hud-topleft {
+  position: absolute;
+  top: env(safe-area-inset-top, 8px);
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#hud-score {
+  background: rgba(0,0,0,0.5);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+#kill-feed { display: flex; flex-direction: column; gap: 2px; }
+.kill-entry {
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  animation: kill-fade 3s forwards;
+}
+@keyframes kill-fade {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Minimap */
+#hud-topright {
+  position: absolute;
+  top: env(safe-area-inset-top, 8px);
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+#minimap-canvas {
+  border: 2px solid rgba(79, 195, 247, 0.4);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.5);
+}
+#hud-players-alive {
+  font-size: 0.7rem;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Power-up indicators */
+#hud-powerups {
+  position: absolute;
+  top: env(safe-area-inset-top, 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.pu-indicator {
+  background: rgba(0,0,0,0.6);
+  border: 2px solid #4fc3f7;
+  border-radius: 8px;
+  padding: 4px 8px;
+  text-align: center;
+  font-size: 0.75rem;
+}
+.pu-icon { font-size: 1.1rem; display: block; }
+.pu-timer { color: #4fc3f7; font-weight: bold; }
+
+/* Fire & Missile buttons */
+.hud-action-btn {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: bold;
+  transition: transform 0.08s, opacity 0.08s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+.hud-action-btn:active { transform: scale(0.88); }
+.hud-action-btn small { font-size: 0.55rem; letter-spacing: 0.05em; color: rgba(255,255,255,0.7); }
+
+.fire-btn {
+  background: radial-gradient(circle, #b71c1c, #880000);
+  box-shadow: 0 0 20px rgba(220, 50, 50, 0.6);
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  right: 20px;
+}
+.fire-btn.pressed {
+  background: radial-gradient(circle, #ff5252, #b71c1c);
+  box-shadow: 0 0 30px rgba(255, 80, 80, 0.9);
+}
+
+.missile-btn {
+  background: radial-gradient(circle, #e65100, #bf360c);
+  box-shadow: 0 0 20px rgba(230, 100, 0, 0.6);
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 120px);
+  right: 20px;
+  position: relative; /* for cooldown ring */
+}
+.missile-btn.on-cooldown {
+  background: radial-gradient(circle, #333, #222);
+  box-shadow: none;
+}
+.missile-btn small { font-size: 0.5rem; }
+
+/* Cooldown ring (SVG-like using conic gradient) */
+.cooldown-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(#4fc3f7 0%, transparent 0%);
+  pointer-events: none;
+  transition: background 0.1s linear;
+}
+
+/* Gear button */
+#btn-pause-settings {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #aab;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* HUD layout mode (drag mode) visual */
+.layout-mode .hud-action-btn {
+  border: 2px dashed #4fc3f7 !important;
+  animation: layout-pulse 1s ease-in-out infinite;
+}
+@keyframes layout-pulse {
+  0%,100% { box-shadow: 0 0 10px #4fc3f7; }
+  50%      { box-shadow: 0 0 25px #4fc3f7; }
+}
+
+/* ── Game overlays (respawn / pause) ── */
+.game-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(5, 10, 25, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.overlay-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.overlay-content h2 { font-size: 1.8rem; color: #e74c3c; }
+.overlay-content p  { font-size: 1rem; color: #aab; }
+#respawn-countdown  { color: #4fc3f7; font-weight: bold; font-size: 1.4rem; }
+.respawn-bar-bg {
+  height: 8px;
+  background: #1e3a5a;
+  border-radius: 4px;
+  width: 200px;
+  margin: 0 auto;
+}
+.respawn-bar {
+  height: 100%;
+  background: #4fc3f7;
+  border-radius: 4px;
+  width: 100%;
+  transition: width 0.1s linear;
+}
+
+/* ── Game Over ── */
+.gameover-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #0d1b2a;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.gameover-stats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0.5rem;
+}
+.gameover-stats .stat-row span:last-child { color: #4fc3f7; font-weight: bold; }
+
+/* ── Error message ── */
+.error-msg { color: #e74c3c; font-size: 0.8rem; text-align: center; min-height: 1em; }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* ── Explosion / damage flash particles (canvas-drawn, no CSS needed) ── */
+/* Just ensure canvas z-index is below HUD */
+#game-canvas { position: relative; z-index: 1; }

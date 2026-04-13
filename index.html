@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Aero — Air Combat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       PORTRAIT WARNING OVERLAY (CSS-driven, no JS needed initially)
+  ═══════════════════════════════════════════════ -->
+  <div id="portrait-overlay">
+    <div class="portrait-content">
+      <div class="rotate-icon">&#8635;</div>
+      <p>Please rotate your device to <strong>Landscape</strong> to play.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN MENU SCREEN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-menu" class="screen active">
+    <div class="menu-bg-canvas-wrapper">
+      <canvas id="menu-canvas"></canvas>
+    </div>
+    <div class="menu-content">
+      <h1 class="game-title">AERO</h1>
+      <p class="game-subtitle">AIR COMBAT</p>
+      <div class="menu-buttons">
+        <button id="btn-create" class="btn btn-primary">Create Room</button>
+        <button id="btn-join" class="btn btn-secondary">Join Room</button>
+        <button id="btn-singleplayer" class="btn btn-accent">Solo vs AI</button>
+        <button id="btn-settings-menu" class="btn btn-outline">Settings</button>
+      </div>
+      <p class="version">v1.0 — Tilt to fly. Tap to fire.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       JOIN ROOM SCREEN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-join" class="screen">
+    <div class="panel">
+      <h2>Join a Room</h2>
+      <input id="join-code-input" type="text" maxlength="6"
+             placeholder="Enter room code" autocapitalize="characters"
+             autocomplete="off" spellcheck="false" />
+      <button id="btn-join-confirm" class="btn btn-primary">Connect</button>
+      <button id="btn-join-back" class="btn btn-outline">Back</button>
+      <p id="join-error" class="error-msg"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       LOBBY SCREEN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-lobby" class="screen">
+    <div class="lobby-container">
+      <h2>Lobby</h2>
+
+      <!-- Room code display (for host) -->
+      <div id="room-code-display" class="room-code-box hidden">
+        <span>Room Code:</span>
+        <strong id="room-code-text">------</strong>
+        <button id="btn-copy-code" class="btn-small">Copy</button>
+      </div>
+
+      <!-- Jet color picker -->
+      <div class="color-picker-section">
+        <label>Your Jet Color:</label>
+        <div id="color-swatches" class="color-swatches">
+          <div class="swatch" data-color="#e74c3c" style="background:#e74c3c"></div>
+          <div class="swatch" data-color="#3498db" style="background:#3498db"></div>
+          <div class="swatch" data-color="#2ecc71" style="background:#2ecc71"></div>
+          <div class="swatch" data-color="#f39c12" style="background:#f39c12"></div>
+          <div class="swatch" data-color="#9b59b6" style="background:#9b59b6"></div>
+          <div class="swatch" data-color="#1abc9c" style="background:#1abc9c"></div>
+          <div class="swatch" data-color="#e91e63" style="background:#e91e63"></div>
+          <div class="swatch selected" data-color="#ffffff" style="background:#ffffff"></div>
+        </div>
+      </div>
+
+      <!-- Game mode (host only) -->
+      <div id="mode-section" class="mode-section hidden">
+        <label>Game Mode:</label>
+        <div class="mode-buttons">
+          <button id="btn-mode-solo" class="btn btn-small mode-btn active-mode">Solo FFA</button>
+          <button id="btn-mode-team" class="btn btn-small mode-btn">Team 5v5</button>
+        </div>
+        <p class="mode-desc" id="mode-desc">Free-for-all — max 20 players</p>
+      </div>
+
+      <!-- Team selection (visible in team mode) -->
+      <div id="team-section" class="team-section hidden">
+        <label>Team:</label>
+        <button id="btn-team-red" class="btn btn-small team-btn" data-team="red" style="background:#c0392b">Red Team</button>
+        <button id="btn-team-blue" class="btn btn-small team-btn" data-team="blue" style="background:#2980b9">Blue Team</button>
+      </div>
+
+      <!-- Players list -->
+      <div class="players-list-section">
+        <label>Players (<span id="player-count">1</span>/<span id="player-max">20</span>):</label>
+        <ul id="players-list"></ul>
+      </div>
+
+      <div class="lobby-actions">
+        <button id="btn-start-game" class="btn btn-primary hidden">Start Game</button>
+        <button id="btn-lobby-ready" class="btn btn-accent">Ready</button>
+        <button id="btn-lobby-back" class="btn btn-outline">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SETTINGS SCREEN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-settings" class="screen">
+    <div class="panel settings-panel">
+      <h2>Settings</h2>
+
+      <div class="setting-row">
+        <label>Gyroscope Sensitivity</label>
+        <div class="slider-row">
+          <span>Low</span>
+          <input id="sensitivity-slider" type="range" min="0.5" max="5" step="0.1" value="2.0" />
+          <span>High</span>
+        </div>
+        <span id="sensitivity-value" class="setting-value">2.0</span>
+      </div>
+
+      <div class="setting-row">
+        <label>Invert Controls</label>
+        <label class="toggle-switch">
+          <input id="invert-toggle" type="checkbox" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <label>HUD Layout Mode</label>
+        <button id="btn-layout-mode" class="btn btn-small">Enable Drag Mode</button>
+        <p class="hint">Drag buttons to reposition them.</p>
+      </div>
+
+      <div class="setting-row">
+        <label>Reset Button Positions</label>
+        <button id="btn-reset-hud" class="btn btn-small">Reset</button>
+      </div>
+
+      <button id="btn-settings-back" class="btn btn-outline">Back</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       GAME CANVAS
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-game" class="screen">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hud">
+      <!-- Top-left: Score + kill feed -->
+      <div id="hud-topleft">
+        <div id="hud-score">Score: <span id="score-value">0</span></div>
+        <div id="kill-feed"></div>
+      </div>
+
+      <!-- Top-right: Minimap / room info -->
+      <div id="hud-topright">
+        <canvas id="minimap-canvas" width="120" height="120"></canvas>
+        <div id="hud-players-alive">Players: <span id="alive-count">1</span></div>
+      </div>
+
+      <!-- Top-center: Power-up indicators -->
+      <div id="hud-powerups">
+        <div id="pu-shield" class="pu-indicator hidden">
+          <span class="pu-icon">🛡</span>
+          <span class="pu-timer" id="pu-shield-timer">5s</span>
+        </div>
+        <div id="pu-rapidfire" class="pu-indicator hidden">
+          <span class="pu-icon">🔥</span>
+          <span class="pu-timer" id="pu-rapidfire-timer">5s</span>
+        </div>
+        <div id="pu-speed" class="pu-indicator hidden">
+          <span class="pu-icon">⚡</span>
+          <span class="pu-timer" id="pu-speed-timer">5s</span>
+        </div>
+      </div>
+
+      <!-- FIRE button (right side, draggable) -->
+      <button id="btn-fire" class="hud-action-btn fire-btn" data-btn="fire">
+        <span>🔫</span>
+        <small>FIRE</small>
+      </button>
+
+      <!-- MISSILE button (draggable) -->
+      <button id="btn-missile" class="hud-action-btn missile-btn" data-btn="missile">
+        <span>🚀</span>
+        <div id="missile-cooldown-ring" class="cooldown-ring"></div>
+        <small id="missile-cooldown-text">READY</small>
+      </button>
+
+      <!-- Settings gear (in-game) -->
+      <button id="btn-pause-settings" class="hud-gear-btn">⚙</button>
+    </div>
+
+    <!-- Respawn overlay -->
+    <div id="respawn-overlay" class="game-overlay hidden">
+      <div class="overlay-content">
+        <h2>You were shot down!</h2>
+        <p>Respawning in <span id="respawn-countdown">5</span>s</p>
+        <div class="respawn-bar-bg"><div id="respawn-bar" class="respawn-bar"></div></div>
+      </div>
+    </div>
+
+    <!-- In-game settings (pause) -->
+    <div id="pause-overlay" class="game-overlay hidden">
+      <div class="panel settings-panel">
+        <h2>Paused</h2>
+        <div class="setting-row">
+          <label>Sensitivity</label>
+          <input id="sensitivity-slider-hud" type="range" min="0.5" max="5" step="0.1" value="2.0" />
+          <span id="sensitivity-value-hud" class="setting-value">2.0</span>
+        </div>
+        <div class="setting-row">
+          <label>Invert Controls</label>
+          <label class="toggle-switch">
+            <input id="invert-toggle-hud" type="checkbox" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <label>HUD Layout Mode</label>
+          <button id="btn-layout-mode-hud" class="btn btn-small">Toggle Drag</button>
+        </div>
+        <button id="btn-resume" class="btn btn-primary">Resume</button>
+        <button id="btn-quit" class="btn btn-outline">Quit to Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       GAME OVER SCREEN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-gameover" class="screen">
+    <div class="panel">
+      <h2 id="gameover-title">Game Over</h2>
+      <div id="gameover-stats" class="gameover-stats"></div>
+      <button id="btn-gameover-menu" class="btn btn-primary">Main Menu</button>
+      <button id="btn-gameover-retry" class="btn btn-accent">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Scripts — load in order -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="js/Config.js"></script>
+  <script src="js/Entities.js"></script>
+  <script src="js/InputHandler.js"></script>
+  <script src="js/NetworkManager.js"></script>
+  <script src="js/GameEngine.js"></script>
+  <script src="js/UI.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
