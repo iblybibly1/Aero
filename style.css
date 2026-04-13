@@ -401,9 +401,8 @@ input[type="range"] {
 .missile-btn {
   background: radial-gradient(circle, #e65100, #8d2600);
   box-shadow: 0 0 14px rgba(200, 80, 0, 0.55);
-  bottom: calc(env(safe-area-inset-bottom, 16px) + 92px);
-  right: 16px;
-  /* position: absolute is inherited from .hud-action-btn — do NOT override */
+  bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+  right: 92px; /* sits directly left of the fire button */
 }
 .missile-btn.on-cooldown {
   background: radial-gradient(circle, #2a2a2a, #1a1a1a);
