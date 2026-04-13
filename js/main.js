@@ -352,6 +352,14 @@ function _startGame(playerInfo, netManager, opts) {
   /* Bind draggable fire/missile buttons */
   input.bindButtons();
 
+  /* Setup virtual joystick (always available as fallback) */
+  input.setupJoystick();
+  /* If gyro is working, hide the joystick label but keep it available */
+  if (input.gyroEnabled) {
+    const label = document.getElementById('joystick-label');
+    if (label) label.style.display = 'none';
+  }
+
   /* HUD tick (separate from game loop — for power-up display) */
   const hudInterval = setInterval(() => {
     if (!engine) { clearInterval(hudInterval); return; }
@@ -379,14 +387,33 @@ async function _requestGyro() {
   try {
     const result = await input.requestGyroPermission();
     if (result === 'denied') {
-      alert('Gyroscope access denied.\nPlease enable motion sensors in your browser/device settings.');
-      return false;
+      /* Show soft warning — game still starts with joystick fallback */
+      _showGyroWarning();
     }
+    /* Always return true — joystick covers the fallback */
     return true;
   } catch(e) {
     console.warn('Gyro request failed:', e);
-    return true; // allow play without gyro (desktop fallback)
+    return true;
   }
+}
+
+function _showGyroWarning() {
+  const div = document.createElement('div');
+  div.id = 'gyro-warning';
+  div.style.cssText = `
+    position:fixed; top:12px; left:50%; transform:translateX(-50%);
+    background:rgba(180,60,0,0.92); color:#fff; padding:10px 18px;
+    border-radius:10px; font-size:0.8rem; z-index:9000; text-align:center;
+    max-width:90vw; line-height:1.5;
+  `;
+  div.innerHTML = `
+    ⚠️ Gyroscope unavailable — using <strong>joystick</strong> instead.<br>
+    <small>iOS: Settings → Safari → turn on <em>Motion &amp; Orientation Access</em></small><br>
+    <small style="color:#ffd;cursor:pointer;" onclick="this.parentElement.remove()">Tap to dismiss</small>
+  `;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 8000);
 }
 
 /* ═══════════════════════════════════════════════

@@ -505,6 +505,49 @@ input[type="range"] {
 /* ── Utility ── */
 .hidden { display: none !important; }
 
+/* ── Virtual Joystick ── */
+.joystick-zone {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  pointer-events: auto;
+  touch-action: none;
+}
+#joystick-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 195, 247, 0.35);
+  background: rgba(79, 195, 247, 0.07);
+}
+.joystick-zone.active #joystick-ring {
+  border-color: rgba(79, 195, 247, 0.7);
+  background: rgba(79, 195, 247, 0.12);
+}
+#joystick-knob {
+  position: absolute;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79,195,247,0.8), rgba(79,195,247,0.3));
+  border: 2px solid rgba(79,195,247,0.9);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 0.05s ease-out;
+  pointer-events: none;
+}
+#joystick-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: rgba(79,195,247,0.5);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
 /* ── Explosion / damage flash particles (canvas-drawn, no CSS needed) ── */
 /* Just ensure canvas z-index is below HUD */
 #game-canvas { position: relative; z-index: 1; }

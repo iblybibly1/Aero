@@ -21,6 +21,13 @@ class InputHandler {
     this.firing      = false;
     this.missileFired= false; // pulse flag — read once per frame
 
+    /* Virtual joystick (fallback when no gyro) */
+    this._joystickActive = false;
+    this._joystickTurn   = 0;   // -1 (left) to +1 (right)
+    this._joystickTouchId= null;
+    this._joystickBaseX  = 0;
+    this._joystickBaseY  = 0;
+
     /* Drag state */
     this.layoutMode  = false;
     this._dragBtn    = null;
@@ -84,8 +91,12 @@ class InputHandler {
    * Returns a value in radians/second to ADD to jet angle.
    */
   getTurnRate() {
-    /* In landscape mode, gamma (tiltY) drives left/right.
-       Positive gamma = tilt right = turn right (positive angle change). */
+    /* Virtual joystick overrides gyro if being used */
+    if (this._joystickActive) {
+      return this._joystickTurn * Config.JET_TURN_SPEED * (this.sensitivity / Config.DEFAULT_SENSITIVITY);
+    }
+    if (!this.gyroEnabled) return 0;
+    /* In landscape mode, gamma (tiltY) drives left/right. */
     let raw = this.tiltY; // degrees
     if (this.invertY) raw = -raw;
     /* Deadzone ±3° to avoid drift */
@@ -98,6 +109,79 @@ class InputHandler {
   stop() {
     window.removeEventListener('deviceorientation', this._bindOrientationEvent, true);
     this.gyroEnabled = false;
+  }
+
+  /* ──────────────────────────────────────────────────────
+     VIRTUAL JOYSTICK  (shown when gyro unavailable)
+  ────────────────────────────────────────────────────── */
+  setupJoystick() {
+    const stick = document.getElementById('joystick-zone');
+    if (!stick) return;
+
+    /* Show joystick zone always — hide if gyro ends up working */
+    stick.classList.remove('hidden');
+
+    const onStart = (id, cx, cy) => {
+      if (this._joystickTouchId !== null) return;
+      this._joystickTouchId = id;
+      this._joystickBaseX   = cx;
+      this._joystickBaseY   = cy;
+      this._joystickActive  = true;
+      this._updateStickVisual(0, 0);
+      stick.classList.add('active');
+    };
+    const onMove = (id, cx, cy) => {
+      if (this._joystickTouchId !== id) return;
+      const dx  = cx - this._joystickBaseX;
+      const dy  = cy - this._joystickBaseY;
+      const max = 55; // px travel
+      /* Horizontal = steer, vertical = ignored (jet always moves forward) */
+      this._joystickTurn = Math.max(-1, Math.min(1, dx / max));
+      this._updateStickVisual(
+        Math.max(-max, Math.min(max, dx)),
+        Math.max(-max, Math.min(max, dy))
+      );
+    };
+    const onEnd = (id) => {
+      if (this._joystickTouchId !== id) return;
+      this._joystickTouchId = null;
+      this._joystickActive  = false;
+      this._joystickTurn    = 0;
+      this._updateStickVisual(0, 0);
+      stick.classList.remove('active');
+    };
+
+    stick.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      onStart(t.identifier, t.clientX, t.clientY);
+    }, { passive: false });
+    stick.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) onMove(t.identifier, t.clientX, t.clientY);
+    }, { passive: false });
+    stick.addEventListener('touchend', (e) => {
+      for (const t of e.changedTouches) onEnd(t.identifier);
+    });
+    stick.addEventListener('touchcancel', (e) => {
+      for (const t of e.changedTouches) onEnd(t.identifier);
+    });
+
+    /* Mouse fallback for desktop testing */
+    let mouseDown = false;
+    stick.addEventListener('mousedown', (e) => { mouseDown = true; onStart('mouse', e.clientX, e.clientY); });
+    window.addEventListener('mousemove', (e) => { if (mouseDown) onMove('mouse', e.clientX, e.clientY); });
+    window.addEventListener('mouseup',   ()  => { if (mouseDown) { mouseDown = false; onEnd('mouse'); } });
+  }
+
+  _updateStickVisual(dx, dy) {
+    const knob = document.getElementById('joystick-knob');
+    if (knob) knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  }
+
+  hideJoystick() {
+    const stick = document.getElementById('joystick-zone');
+    if (stick) stick.classList.add('hidden');
   }
 
   /* ──────────────────────────────────────────────────────
