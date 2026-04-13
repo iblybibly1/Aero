@@ -64,7 +64,7 @@ class Jet {
     /* Weapons */
     this.lastBulletTime = 0;
     this.missileCooldown = 0;  // seconds remaining
-    this.get missileReady() { return this.missileCooldown <= 0; }
+    /* missileReady is computed as a getter below */
 
     /* Visual */
     this.damageFlash    = 0;   // countdown in seconds
@@ -76,6 +76,7 @@ class Jet {
   }
 
   /* ── Getters for current rates ── */
+  get missileReady() { return this.missileCooldown <= 0; }
   get fireRateMs() {
     return this.hasRapidFire ? Config.RAPID_FIRE_MS : Config.FIRE_RATE_MS;
   }
