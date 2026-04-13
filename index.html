@@ -123,9 +123,12 @@
       <h2>Settings</h2>
 
       <div class="setting-row">
-        <label>Gyroscope</label>
-        <button id="btn-enable-gyro" class="btn btn-accent">Enable Gyroscope</button>
-        <p id="gyro-status" class="hint">Status: unknown</p>
+        <label>Input Source</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-small gyro-mode-btn active-mode" onclick="enableGyro('gyro-status')">Gyroscope</button>
+          <button class="btn btn-small gyro-mode-btn" onclick="enableJoystick('gyro-status')">Joystick</button>
+        </div>
+        <p id="gyro-status" class="hint">Tap Gyroscope to request permission.</p>
       </div>
 
       <div class="setting-row">
@@ -235,9 +238,12 @@
       <div class="panel settings-panel">
         <h2>Paused</h2>
         <div class="setting-row">
-          <label>Gyroscope</label>
-          <button id="btn-enable-gyro-hud" class="btn btn-accent">Enable Gyroscope</button>
-          <p id="gyro-status-hud" class="hint">Status: unknown</p>
+          <label>Input Source</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn btn-small gyro-mode-btn active-mode" onclick="enableGyro('gyro-status-hud')">Gyroscope</button>
+            <button class="btn btn-small gyro-mode-btn" onclick="enableJoystick('gyro-status-hud')">Joystick</button>
+          </div>
+          <p id="gyro-status-hud" class="hint">Tap Gyroscope to request permission.</p>
         </div>
         <div class="setting-row">
           <label>Sensitivity</label>
@@ -272,6 +278,56 @@
       <button id="btn-gameover-retry" class="btn btn-accent">Play Again</button>
     </div>
   </div>
+
+  <!-- Gyroscope permission — must be global functions called via onclick -->
+  <script>
+    function enableGyro(statusId) {
+      const el = document.getElementById(statusId);
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ — requestPermission MUST be called directly from onclick
+        DeviceOrientationEvent.requestPermission().then(function(result) {
+          if (result === 'granted') {
+            window.addEventListener('deviceorientation', _gyroHandler, true);
+            if (el) el.textContent = '✓ Gyroscope active!';
+            if (el) el.style.color = '#2ecc71';
+            if (window.input) { window.input.gyroEnabled = true; }
+            if (window.input) window.input.hideJoystick();
+          } else {
+            if (el) el.textContent = '✗ Denied. Go to iOS Settings → Safari → Motion & Orientation Access';
+            if (el) el.style.color = '#e74c3c';
+          }
+        }).catch(function() {
+          if (el) el.textContent = '✗ Permission error. Try reloading the page.';
+          if (el) el.style.color = '#e74c3c';
+        });
+      } else {
+        // Android / desktop — no permission needed, just start listening
+        window.addEventListener('deviceorientation', _gyroHandler, true);
+        if (window.input) { window.input.gyroEnabled = true; }
+        if (window.input) window.input.hideJoystick();
+        if (el) el.textContent = '✓ Gyroscope active!';
+        if (el) el.style.color = '#2ecc71';
+      }
+    }
+
+    function enableJoystick(statusId) {
+      const el = document.getElementById(statusId);
+      window.removeEventListener('deviceorientation', _gyroHandler, true);
+      if (window.input) { window.input.gyroEnabled = false; }
+      const zone = document.getElementById('joystick-zone');
+      if (zone) zone.classList.remove('hidden');
+      if (el) el.textContent = 'Joystick active.';
+      if (el) el.style.color = '#4fc3f7';
+    }
+
+    function _gyroHandler(e) {
+      if (window.input) {
+        window.input.tiltY = e.gamma || 0;
+        window.input.tiltX = e.beta  || 0;
+      }
+    }
+  </script>
 
   <!-- Scripts — load in order -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>

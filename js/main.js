@@ -24,6 +24,7 @@ let isHost         = false;
 ═══════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
   input = new InputHandler();
+  window.input = input; // expose globally for inline onclick gyro handler
   ui    = new UIManager(input);
   ui.showScreen('menu');
 
@@ -255,11 +256,7 @@ function _setupClientLobbyEvents() {
    SETTINGS BUTTONS
 ═══════════════════════════════════════════════ */
 function _bindSettingsButtons() {
-  /* Gyro enable buttons — permission MUST fire directly from tap handler */
-  _onGyroBtn('btn-enable-gyro',     'gyro-status');
-  _onGyroBtn('btn-enable-gyro-hud', 'gyro-status-hud');
-
-  _on('btn-settings-back', () => ui.showScreen('menu'));
+_on('btn-settings-back', () => ui.showScreen('menu'));
   _on('btn-layout-mode', () => {
     const on = input.toggleLayoutMode();
     document.getElementById('btn-layout-mode').textContent = on ? 'Disable Drag Mode' : 'Enable Drag Mode';
