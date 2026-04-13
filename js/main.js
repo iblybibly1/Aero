@@ -108,8 +108,6 @@ function _runMenuAnimation() {
 function _bindMenuButtons() {
   /* Create Room */
   _on('btn-create', async () => {
-    const granted = await _requestGyro();
-    if (!granted) return;
     isHost = true;
     net = new NetworkManager();
     const code = NetworkManager.generateCode();
@@ -130,8 +128,6 @@ function _bindMenuButtons() {
 
   /* Join Room */
   _on('btn-join', async () => {
-    const granted = await _requestGyro();
-    if (!granted) return;
     isHost = false;
     ui.showScreen('join');
     document.getElementById('join-error').textContent = '';
@@ -140,11 +136,7 @@ function _bindMenuButtons() {
   });
 
   /* Solo vs AI */
-  _on('btn-singleplayer', async () => {
-    const granted = await _requestGyro();
-    if (!granted) return;
-    _startSinglePlayer();
-  });
+  _on('btn-singleplayer', () => _startSinglePlayer());
 
   /* Settings (from menu) */
   _on('btn-settings-menu', () => ui.showScreen('settings'));
@@ -263,6 +255,10 @@ function _setupClientLobbyEvents() {
    SETTINGS BUTTONS
 ═══════════════════════════════════════════════ */
 function _bindSettingsButtons() {
+  /* Gyro enable buttons — permission MUST fire directly from tap handler */
+  _onGyroBtn('btn-enable-gyro',     'gyro-status');
+  _onGyroBtn('btn-enable-gyro-hud', 'gyro-status-hud');
+
   _on('btn-settings-back', () => ui.showScreen('menu'));
   _on('btn-layout-mode', () => {
     const on = input.toggleLayoutMode();
@@ -430,6 +426,67 @@ function _getPlayerInfo() {
 function _addSelfToLobby() {
   lobbyPlayers = [{ id: 'local', name: 'You', color: selectedColor, team: selectedTeam, ready: true }];
   ui.updatePlayerList(lobbyPlayers);
+}
+
+/**
+ * Bind the gyroscope enable button.
+ * Permission call is DIRECTLY inside the event handler — required by iOS.
+ */
+function _onGyroBtn(btnId, statusId) {
+  const btn    = document.getElementById(btnId);
+  const status = document.getElementById(statusId);
+  if (!btn) return;
+
+  const setStatus = (text, color) => {
+    if (status) { status.textContent = 'Status: ' + text; status.style.color = color; }
+  };
+
+  /* Sync initial status */
+  setStatus(input.gyroEnabled ? 'Active ✓' : 'Not enabled', input.gyroEnabled ? '#2ecc71' : '#aab');
+
+  const handler = () => {
+    /* iOS 13+: must call requestPermission directly from tap */
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+
+      DeviceOrientationEvent.requestPermission().then(result => {
+        if (result === 'granted') {
+          input._startListening();
+          setStatus('Active ✓', '#2ecc71');
+          btn.textContent = 'Gyroscope Active ✓';
+          btn.style.background = '#27ae60';
+          /* Hide joystick now that gyro works */
+          if (engine) input.hideJoystick();
+        } else {
+          setStatus('Denied — see iOS Settings', '#e74c3c');
+          btn.textContent = 'Permission Denied';
+          btn.style.background = '#c0392b';
+        }
+      }).catch(() => {
+        setStatus('Error requesting permission', '#e74c3c');
+      });
+
+    } else {
+      /* Android / desktop — no permission dialog needed */
+      input._startListening();
+      setStatus('Active ✓', '#2ecc71');
+      btn.textContent = 'Gyroscope Active ✓';
+      btn.style.background = '#27ae60';
+      if (engine) input.hideJoystick();
+    }
+  };
+
+  /* touchstart for zero-latency — iOS requires gesture to be synchronous */
+  let touched = false;
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touched = true;
+    handler();
+  }, { passive: false });
+  btn.addEventListener('click', () => {
+    if (touched) { touched = false; return; }
+    handler();
+  });
 }
 
 /** Attach touchstart (+ click fallback) to a button by id */

@@ -123,6 +123,12 @@
       <h2>Settings</h2>
 
       <div class="setting-row">
+        <label>Gyroscope</label>
+        <button id="btn-enable-gyro" class="btn btn-accent">Enable Gyroscope</button>
+        <p id="gyro-status" class="hint">Status: unknown</p>
+      </div>
+
+      <div class="setting-row">
         <label>Gyroscope Sensitivity</label>
         <div class="slider-row">
           <span>Low</span>
@@ -228,6 +234,11 @@
     <div id="pause-overlay" class="game-overlay hidden">
       <div class="panel settings-panel">
         <h2>Paused</h2>
+        <div class="setting-row">
+          <label>Gyroscope</label>
+          <button id="btn-enable-gyro-hud" class="btn btn-accent">Enable Gyroscope</button>
+          <p id="gyro-status-hud" class="hint">Status: unknown</p>
+        </div>
         <div class="setting-row">
           <label>Sensitivity</label>
           <input id="sensitivity-slider-hud" type="range" min="0.5" max="5" step="0.1" value="2.0" />
