@@ -367,8 +367,8 @@ input[type="range"] {
 /* Fire & Missile buttons */
 .hud-action-btn {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -376,64 +376,65 @@ input[type="range"] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   font-weight: bold;
   transition: transform 0.08s, opacity 0.08s;
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
 }
-.hud-action-btn:active { transform: scale(0.88); }
-.hud-action-btn small { font-size: 0.55rem; letter-spacing: 0.05em; color: rgba(255,255,255,0.7); }
+.hud-action-btn:active { transform: scale(0.88) !important; }
+.hud-action-btn small { font-size: 0.48rem; letter-spacing: 0.05em; color: rgba(255,255,255,0.75); }
 
+/* FIRE button */
 .fire-btn {
-  background: radial-gradient(circle, #b71c1c, #880000);
-  box-shadow: 0 0 20px rgba(220, 50, 50, 0.6);
-  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
-  right: 20px;
+  background: radial-gradient(circle, #b71c1c, #6a0000);
+  box-shadow: 0 0 14px rgba(200, 40, 40, 0.55);
+  bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+  right: 16px;
 }
 .fire-btn.pressed {
   background: radial-gradient(circle, #ff5252, #b71c1c);
-  box-shadow: 0 0 30px rgba(255, 80, 80, 0.9);
+  box-shadow: 0 0 22px rgba(255, 80, 80, 0.8);
 }
 
+/* MISSILE button — directly above fire */
 .missile-btn {
-  background: radial-gradient(circle, #e65100, #bf360c);
-  box-shadow: 0 0 20px rgba(230, 100, 0, 0.6);
-  bottom: calc(env(safe-area-inset-bottom, 20px) + 120px);
-  right: 20px;
-  position: relative;
+  background: radial-gradient(circle, #e65100, #8d2600);
+  box-shadow: 0 0 14px rgba(200, 80, 0, 0.55);
+  bottom: calc(env(safe-area-inset-bottom, 16px) + 92px);
+  right: 16px;
+  position: relative; /* for cooldown ring */
 }
 .missile-btn.on-cooldown {
-  background: radial-gradient(circle, #333, #222);
-  box-shadow: none;
+  background: radial-gradient(circle, #2a2a2a, #1a1a1a);
+  box-shadow: 0 0 6px rgba(80,80,80,0.3);
 }
-.missile-btn small { font-size: 0.5rem; }
+.missile-btn small { font-size: 0.45rem; }
 
-/* Power-up button — bottom centre, hard to miss */
+/* POWER-UP button — bottom centre, smaller */
 .powerup-btn {
-  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
   left: 50%;
   transform: translateX(-50%);
-  width: 86px;
-  height: 86px;
+  width: 64px;
+  height: 64px;
   background: radial-gradient(circle, #9c27b0, #6a1b9a);
-  box-shadow: 0 0 28px rgba(156, 39, 176, 0.85);
-  border: 2px solid rgba(255,255,255,0.25);
-  font-size: 2rem;
-  flex-direction: column;
+  box-shadow: 0 0 18px rgba(156, 39, 176, 0.7);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  font-size: 1.5rem;
 }
 .powerup-btn small {
-  font-size: 0.6rem;
+  font-size: 0.48rem;
   font-weight: 900;
   color: #fff;
-  letter-spacing: 0.05em;
-  margin-top: -4px;
+  letter-spacing: 0.04em;
+  margin-top: -2px;
 }
 
 @keyframes powerup-earned {
-  0%   { transform: translateX(-50%) scale(1);    }
-  50%  { transform: translateX(-50%) scale(1.3);  }
-  100% { transform: translateX(-50%) scale(1);    }
+  0%   { transform: translateX(-50%) scale(1);   }
+  50%  { transform: translateX(-50%) scale(1.28); }
+  100% { transform: translateX(-50%) scale(1);   }
 }
 
 /* Cooldown ring (SVG-like using conic gradient) */
@@ -575,32 +576,32 @@ input[type="range"] {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2.5px solid rgba(79, 195, 247, 0.45);
-  background: rgba(79, 195, 247, 0.06);
+  border: 1.5px solid rgba(79, 195, 247, 0.18);
+  background: rgba(79, 195, 247, 0.03);
 }
 .joystick-zone.active #joystick-ring {
-  border-color: rgba(79, 195, 247, 0.85);
-  background: rgba(79, 195, 247, 0.13);
+  border-color: rgba(79, 195, 247, 0.4);
+  background: rgba(79, 195, 247, 0.06);
 }
 #joystick-knob {
   position: absolute;
-  width: 52px; height: 52px;
+  width: 48px; height: 48px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(120,220,255,0.95), rgba(30,140,200,0.7));
-  border: 2px solid rgba(79,195,247,0.95);
+  background: radial-gradient(circle at 35% 35%, rgba(79,195,247,0.35), rgba(20,100,160,0.25));
+  border: 1.5px solid rgba(79,195,247,0.35);
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   transition: transform 0.04s linear;
   pointer-events: none;
-  box-shadow: 0 0 12px rgba(79,195,247,0.5);
+  box-shadow: none;
 }
 #joystick-label {
   position: absolute;
   bottom: -18px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.6rem;
-  color: rgba(79,195,247,0.5);
+  font-size: 0.55rem;
+  color: rgba(79,195,247,0.25);
   letter-spacing: 0.1em;
   white-space: nowrap;
 }

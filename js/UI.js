@@ -62,38 +62,44 @@ class UIManager {
     while (feed.children.length > 5) feed.removeChild(feed.lastChild);
   }
 
-  /* Power-up button — shows when earned (pending) or active */
+  /* Power-up button — shows when pending or active, hides otherwise */
   updatePowerUpBtn(jet) {
     if (!jet) return;
-    const btn      = document.getElementById('btn-powerup');
-    const iconEl   = document.getElementById('powerup-icon');
-    const timerEl  = document.getElementById('powerup-timer-text');
+    const btn     = document.getElementById('btn-powerup');
+    const iconEl  = document.getElementById('powerup-icon');
+    const timerEl = document.getElementById('powerup-timer-text');
     if (!btn) return;
 
     const ICONS  = { shield: '🛡', rapidfire: '🔥', speed: '⚡' };
-    const COLORS = { shield: '#2196f3', rapidfire: '#f44336', speed: '#4caf50' };
+    const COLORS = { shield: '#1565c0', rapidfire: '#c62828', speed: '#2e7d32' };
 
-    /* Priority: active effect > pending pickup */
-    if (jet.hasShield || jet.hasRapidFire || jet.hasSpeedBoost) {
-      /* Show active power-up with countdown */
-      const type  = jet.hasShield ? 'shield' : jet.hasRapidFire ? 'rapidfire' : 'speed';
-      const timer = jet.hasShield ? jet.shieldTimer : jet.hasRapidFire ? jet.rapidFireTimer : jet.speedTimer;
-      btn.classList.remove('hidden');
-      btn.style.background = `radial-gradient(circle, ${COLORS[type]}, ${COLORS[type]}99)`;
-      btn.style.boxShadow  = `0 0 20px ${COLORS[type]}88`;
-      if (iconEl)  iconEl.textContent  = ICONS[type];
-      if (timerEl) timerEl.textContent = Math.ceil(timer) + 's';
+    /* Determine state */
+    let type = null, timerText = '', color = '';
+
+    if (jet.hasShield) {
+      type = 'shield'; color = COLORS.shield;
+      timerText = Math.ceil(jet.shieldTimer) + 's';
+    } else if (jet.hasRapidFire) {
+      type = 'rapidfire'; color = COLORS.rapidfire;
+      timerText = Math.ceil(jet.rapidFireTimer) + 's';
+    } else if (jet.hasSpeedBoost) {
+      type = 'speed'; color = COLORS.speed;
+      timerText = Math.ceil(jet.speedTimer) + 's';
     } else if (jet.pendingPowerUp) {
-      /* Pending — tap to activate */
-      const type = jet.pendingPowerUp;
+      type = jet.pendingPowerUp; color = COLORS[type];
+      timerText = 'USE!';
+    }
+
+    if (type) {
       btn.classList.remove('hidden');
-      btn.style.background = `radial-gradient(circle, ${COLORS[type]}, ${COLORS[type]}99)`;
-      btn.style.boxShadow  = `0 0 25px ${COLORS[type]}, 0 0 50px ${COLORS[type]}55`;
+      btn.style.background = `radial-gradient(circle, ${color}dd, ${color}88)`;
+      btn.style.boxShadow  = `0 0 18px ${color}99`;
+      btn.style.animation  = ''; /* don't override earned animation mid-pulse */
       if (iconEl)  iconEl.textContent  = ICONS[type];
-      if (timerEl) timerEl.textContent = 'USE!';
+      if (timerEl) timerEl.textContent = timerText;
     } else {
-      /* Nothing — hide button */
       btn.classList.add('hidden');
+      btn.style.animation = '';
     }
   }
 
@@ -106,13 +112,14 @@ class UIManager {
 
     if (cooldownRemaining > 0) {
       btn.classList.add('on-cooldown');
-      const pct  = (1 - cooldownRemaining / Config.MISSILE_COOLDOWN) * 100;
-      if (ring) ring.style.background = `conic-gradient(#4fc3f7 ${pct}%, transparent ${pct}%)`;
+      /* Conic gradient fills clockwise as cooldown expires */
+      const pct = Math.round((1 - cooldownRemaining / Config.MISSILE_COOLDOWN) * 100);
+      if (ring) ring.style.background = `conic-gradient(rgba(79,195,247,0.5) ${pct}%, transparent ${pct}%)`;
       if (text) text.textContent = Math.ceil(cooldownRemaining) + 's';
     } else {
       btn.classList.remove('on-cooldown');
       if (ring) ring.style.background = 'none';
-      if (text) text.textContent = 'READY';
+      if (text) text.textContent = 'MSLE';
     }
   }
 

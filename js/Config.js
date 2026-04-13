@@ -15,7 +15,7 @@ const Config = {
   /* Machine gun */
   BULLET_SPEED:   520,   // px/s
   BULLET_RADIUS:    4,
-  BULLET_LIFETIME:  2.2, // seconds before auto-destroy
+  BULLET_LIFETIME:  1.1, // seconds — limits range to ~570px (≈ screen width)
   FIRE_RATE_MS:   140,   // ms between shots (≈7 rps)
   RAPID_FIRE_MS:   70,   // ms when Rapid Fire active (doubles rate)
 
