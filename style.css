@@ -401,13 +401,30 @@ input[type="range"] {
   box-shadow: 0 0 20px rgba(230, 100, 0, 0.6);
   bottom: calc(env(safe-area-inset-bottom, 20px) + 120px);
   right: 20px;
-  position: relative; /* for cooldown ring */
+  position: relative;
 }
 .missile-btn.on-cooldown {
   background: radial-gradient(circle, #333, #222);
   box-shadow: none;
 }
 .missile-btn small { font-size: 0.5rem; }
+
+/* Power-up button — appears above missile when earned */
+.powerup-btn {
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 220px);
+  right: 20px;
+  background: radial-gradient(circle, #9c27b0, #6a1b9a);
+  box-shadow: 0 0 20px rgba(156, 39, 176, 0.7);
+  width: 72px;
+  height: 72px;
+}
+.powerup-btn small { font-size: 0.6rem; font-weight: 900; color: #fff; }
+
+@keyframes powerup-earned {
+  0%   { transform: scale(1);    box-shadow: 0 0 20px currentColor; }
+  50%  { transform: scale(1.25); box-shadow: 0 0 50px currentColor; }
+  100% { transform: scale(1);    box-shadow: 0 0 20px currentColor; }
+}
 
 /* Cooldown ring (SVG-like using conic gradient) */
 .cooldown-ring {
@@ -510,8 +527,8 @@ input[type="range"] {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
   left: 20px;
-  width: 120px;
-  height: 120px;
+  width: 130px;
+  height: 130px;
   pointer-events: auto;
   touch-action: none;
 }
@@ -519,23 +536,24 @@ input[type="range"] {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(79, 195, 247, 0.35);
-  background: rgba(79, 195, 247, 0.07);
+  border: 2.5px solid rgba(79, 195, 247, 0.45);
+  background: rgba(79, 195, 247, 0.06);
 }
 .joystick-zone.active #joystick-ring {
-  border-color: rgba(79, 195, 247, 0.7);
-  background: rgba(79, 195, 247, 0.12);
+  border-color: rgba(79, 195, 247, 0.85);
+  background: rgba(79, 195, 247, 0.13);
 }
 #joystick-knob {
   position: absolute;
-  width: 48px; height: 48px;
+  width: 52px; height: 52px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79,195,247,0.8), rgba(79,195,247,0.3));
-  border: 2px solid rgba(79,195,247,0.9);
+  background: radial-gradient(circle at 35% 35%, rgba(120,220,255,0.95), rgba(30,140,200,0.7));
+  border: 2px solid rgba(79,195,247,0.95);
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  transition: transform 0.05s ease-out;
+  transition: transform 0.04s linear;
   pointer-events: none;
+  box-shadow: 0 0 12px rgba(79,195,247,0.5);
 }
 #joystick-label {
   position: absolute;

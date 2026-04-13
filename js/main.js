@@ -337,28 +337,32 @@ function _startGame(playerInfo, netManager, opts) {
   };
   engine.onLocalRespawn = () => ui.hideRespawn();
 
-  /* Missile button */
+  /* Missile callback */
   input.onMissile = () => {
     if (engine && engine.localJet) engine.tryFireMissile(engine.localJet);
   };
 
-  /* Bind draggable fire/missile buttons */
+  /* Power-up button — tap to activate stored power-up */
+  input.onPowerUp = () => {
+    if (engine) engine.activatePowerUp();
+  };
+
+  /* Engine callback when killer earns a power-up */
+  engine.onPowerUpEarned = () => {
+    const btn = document.getElementById('btn-powerup');
+    if (btn) { btn.style.animation = 'none'; void btn.offsetWidth; btn.style.animation = 'powerup-earned 0.5s ease 3'; }
+  };
+
+  /* Bind all buttons + joystick */
   input.bindButtons();
-
-  /* Setup virtual joystick (always available as fallback) */
   input.setupJoystick();
-  /* If gyro is working, hide the joystick label but keep it available */
-  if (input.gyroEnabled) {
-    const label = document.getElementById('joystick-label');
-    if (label) label.style.display = 'none';
-  }
 
-  /* HUD tick (separate from game loop — for power-up display) */
+  /* HUD tick — power-up button + missile cooldown */
   const hudInterval = setInterval(() => {
     if (!engine) { clearInterval(hudInterval); return; }
     const jet = engine.localJet;
     if (jet) {
-      ui.updatePowerUps(jet);
+      ui.updatePowerUpBtn(jet);
       ui.updateMissileCooldown(jet.missileCooldown);
     }
   }, 100);

@@ -19,9 +19,6 @@ class UIManager {
     this._bindSettings('sensitivity-slider',     'sensitivity-value',     (v) => { input.setSensitivity(v); });
     this._bindSettings('sensitivity-slider-hud', 'sensitivity-value-hud', (v) => { input.setSensitivity(v); });
 
-    this._bindToggle('invert-toggle',     (v) => input.setInvertY(v));
-    this._bindToggle('invert-toggle-hud', (v) => input.setInvertY(v));
-
     /* Sync initial values */
     this._syncSettingsUI();
   }
@@ -65,19 +62,39 @@ class UIManager {
     while (feed.children.length > 5) feed.removeChild(feed.lastChild);
   }
 
-  /* Power-up HUD indicators */
-  updatePowerUps(jet) {
+  /* Power-up button — shows when earned (pending) or active */
+  updatePowerUpBtn(jet) {
     if (!jet) return;
-    this._setPU('shield',    jet.hasShield,    jet.shieldTimer);
-    this._setPU('rapidfire', jet.hasRapidFire, jet.rapidFireTimer);
-    this._setPU('speed',     jet.hasSpeedBoost,jet.speedTimer);
-  }
-  _setPU(type, active, timer) {
-    const el    = document.getElementById(`pu-${type}`);
-    const tEl   = document.getElementById(`pu-${type}-timer`);
-    if (!el) return;
-    el.classList.toggle('hidden', !active);
-    if (tEl && active) tEl.textContent = Math.ceil(timer) + 's';
+    const btn      = document.getElementById('btn-powerup');
+    const iconEl   = document.getElementById('powerup-icon');
+    const timerEl  = document.getElementById('powerup-timer-text');
+    if (!btn) return;
+
+    const ICONS  = { shield: '🛡', rapidfire: '🔥', speed: '⚡' };
+    const COLORS = { shield: '#2196f3', rapidfire: '#f44336', speed: '#4caf50' };
+
+    /* Priority: active effect > pending pickup */
+    if (jet.hasShield || jet.hasRapidFire || jet.hasSpeedBoost) {
+      /* Show active power-up with countdown */
+      const type  = jet.hasShield ? 'shield' : jet.hasRapidFire ? 'rapidfire' : 'speed';
+      const timer = jet.hasShield ? jet.shieldTimer : jet.hasRapidFire ? jet.rapidFireTimer : jet.speedTimer;
+      btn.classList.remove('hidden');
+      btn.style.background = `radial-gradient(circle, ${COLORS[type]}, ${COLORS[type]}99)`;
+      btn.style.boxShadow  = `0 0 20px ${COLORS[type]}88`;
+      if (iconEl)  iconEl.textContent  = ICONS[type];
+      if (timerEl) timerEl.textContent = Math.ceil(timer) + 's';
+    } else if (jet.pendingPowerUp) {
+      /* Pending — tap to activate */
+      const type = jet.pendingPowerUp;
+      btn.classList.remove('hidden');
+      btn.style.background = `radial-gradient(circle, ${COLORS[type]}, ${COLORS[type]}99)`;
+      btn.style.boxShadow  = `0 0 25px ${COLORS[type]}, 0 0 50px ${COLORS[type]}55`;
+      if (iconEl)  iconEl.textContent  = ICONS[type];
+      if (timerEl) timerEl.textContent = 'USE!';
+    } else {
+      /* Nothing — hide button */
+      btn.classList.add('hidden');
+    }
   }
 
   /* Missile cooldown ring + text */
@@ -229,11 +246,6 @@ class UIManager {
     ['sensitivity-value', 'sensitivity-value-hud'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = this.input.sensitivity.toFixed(1);
-    });
-    /* Sync toggles */
-    ['invert-toggle', 'invert-toggle-hud'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.checked = this.input.invertY;
     });
   }
 }

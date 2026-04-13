@@ -225,10 +225,9 @@ class GameEngine {
     }
 
     /* ── Physics ── */
-    for (const jet of this.jets)      jet.update(dt);
-    for (const b   of this.bullets)   b.update(dt);
-    for (const m   of this.missiles)  m.update(dt, this.jets);
-    for (const pu  of this.powerups)  pu.update(dt);
+    for (const jet of this.jets)       jet.update(dt);
+    for (const b   of this.bullets)    b.update(dt);
+    for (const m   of this.missiles)   m.update(dt, this.jets);
     for (const ex  of this.explosions) ex.update(dt);
 
     /* ── Respawns ── */
@@ -247,7 +246,7 @@ class GameEngine {
     /* ── Clean up dead entities ── */
     this.bullets    = this.bullets.filter(b => b.active);
     this.missiles   = this.missiles.filter(m => m.active);
-    this.powerups   = this.powerups.filter(p => p.active);
+
     this.explosions = this.explosions.filter(e => !e.done);
 
     /* ── UI callbacks ── */
@@ -326,17 +325,7 @@ class GameEngine {
       }
     }
 
-    /* Power-ups vs jets */
-    for (const pu of this.powerups) {
-      if (!pu.active) continue;
-      for (const jet of livingJets) {
-        if (pu.collidesWith(jet)) {
-          jet.applyPowerUp(pu.type);
-          pu.active = false;
-          break;
-        }
-      }
-    }
+    /* Power-ups are awarded directly on kill — no world pickup needed */
   }
 
   _killJet(jet, killer) {
@@ -344,11 +333,12 @@ class GameEngine {
     jet.kill(killer);
     this.explosions.push(new Explosion(jet.x, jet.y, jet.color));
 
-    /* Power-up drop */
-    if (Math.random() < Config.POWERUP_DROP_CHANCE) {
+    /* Award power-up directly to killer (50% chance) */
+    if (killer && Math.random() < Config.POWERUP_DROP_CHANCE) {
       const types = ['shield', 'rapidfire', 'speed'];
       const type  = types[Math.floor(Math.random() * types.length)];
-      this.powerups.push(new PowerUp(jet.x, jet.y, type));
+      killer.pendingPowerUp = type; // stored, not yet active
+      if (killer.isLocal && this.onPowerUpEarned) this.onPowerUpEarned(type);
     }
 
     /* Kill feed */
@@ -357,6 +347,15 @@ class GameEngine {
 
     /* Local player death */
     if (jet.isLocal && this.onLocalDeath) this.onLocalDeath(jet.respawnTimer);
+  }
+
+  /* Called when local player taps the power-up button */
+  activatePowerUp() {
+    const jet = this.localJet;
+    if (!jet || !jet.pendingPowerUp) return;
+    jet.applyPowerUp(jet.pendingPowerUp);
+    jet.pendingPowerUp = null;
+    if (this.onPowerUpActivated) this.onPowerUpActivated();
   }
 
   /* ──────────────────────────────────────────────
@@ -521,7 +520,6 @@ class GameEngine {
     ctx.setLineDash([]);
 
     /* === Entities === */
-    for (const pu  of this.powerups)   pu.draw(ctx, cx, cy);
     for (const b   of this.bullets)    b.draw(ctx, cx, cy);
     for (const m   of this.missiles)   m.draw(ctx, cx, cy);
     for (const ex  of this.explosions) ex.draw(ctx, cx, cy);
@@ -562,13 +560,6 @@ class GameEngine {
       mc.fill();
     }
 
-    /* Power-up blips */
-    for (const pu of this.powerups) {
-      mc.fillStyle = PowerUp.COLORS[pu.type];
-      mc.beginPath();
-      mc.arc(pu.x * sc, pu.y * sc, 2, 0, Math.PI * 2);
-      mc.fill();
-    }
   }
 
   /* ──────────────────────────────────────────────

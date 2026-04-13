@@ -1,338 +1,264 @@
 /**
- * InputHandler.js
- * Manages:
- *   - DeviceOrientation API (gyroscope) with iOS 13+ permission
- *   - Touch buttons (fire, missile) with zero-latency touchstart
- *   - Draggable HUD button repositioning (saved to localStorage)
+ * InputHandler.js — Joystick steering + touch fire/missile buttons.
+ * Gyroscope removed entirely. Joystick is the only steering input.
  */
 class InputHandler {
   constructor() {
-    /* Gyroscope state */
-    this.tiltX = 0;      // beta  (front-back tilt, -180..180)
-    this.tiltY = 0;      // gamma (left-right tilt, -90..90)
-    this.gyroEnabled  = false;
-    this.gyroPermission = 'unknown'; // 'granted' | 'denied' | 'unknown'
-
     /* Settings */
     this.sensitivity = parseFloat(localStorage.getItem('aero_sensitivity') ?? Config.DEFAULT_SENSITIVITY);
-    this.invertY     = localStorage.getItem('aero_invertY') === 'true';
 
-    /* Button pressed states */
-    this.firing      = false;
-    this.missileFired= false; // pulse flag — read once per frame
+    /* Joystick state */
+    this._joystickActive  = false;
+    this._joystickTurn    = 0;        // -1 (hard left) … +1 (hard right)
+    this._joystickTouchId = null;
+    this._joystickBaseX   = 0;
+    this._joystickBaseY   = 0;
+    this._joystickDX      = 0;
+    this._joystickDY      = 0;
 
-    /* Virtual joystick (fallback when no gyro) */
-    this._joystickActive = false;
-    this._joystickTurn   = 0;   // -1 (left) to +1 (right)
-    this._joystickTouchId= null;
-    this._joystickBaseX  = 0;
-    this._joystickBaseY  = 0;
+    /* Fire button state */
+    this.firing = false;
 
-    /* Drag state */
-    this.layoutMode  = false;
-    this._dragBtn    = null;
-    this._dragOffX   = 0;
-    this._dragOffY   = 0;
+    /* Drag-to-reposition state */
+    this.layoutMode = false;
+    this._dragBtn   = null;
+    this._dragOffX  = 0;
+    this._dragOffY  = 0;
 
     /* Callbacks */
-    this.onFire    = null;
-    this.onMissile = null;
-
-    this._bindOrientationEvent = this._onOrientation.bind(this);
+    this.onMissile  = null;
+    this.onPowerUp  = null;
   }
 
-  /* ──────────────────────────────────────────────────────
-     GYROSCOPE
-  ────────────────────────────────────────────────────── */
-
-  /**
-   * Request DeviceOrientation permission.
-   * Must be called from a user gesture (touchstart / click).
-   * Returns a promise that resolves to 'granted' | 'denied' | 'not-required'.
-   */
-  async requestGyroPermission() {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+ path
-      try {
-        const result = await DeviceOrientationEvent.requestPermission();
-        this.gyroPermission = result;
-        if (result === 'granted') this._startListening();
-        return result;
-      } catch (e) {
-        console.warn('Gyro permission error:', e);
-        this.gyroPermission = 'denied';
-        return 'denied';
-      }
-    } else {
-      // Android / desktop — no explicit permission needed
-      this._startListening();
-      this.gyroPermission = 'granted';
-      return 'not-required';
-    }
-  }
-
-  _startListening() {
-    window.addEventListener('deviceorientation', this._bindOrientationEvent, true);
-    this.gyroEnabled = true;
-  }
-
-  _onOrientation(e) {
-    /* gamma = left-right tilt  (-90 to 90)
-       beta  = front-back tilt  (-180 to 180)
-       We use gamma for horizontal steering in landscape mode.
-       In landscape, gamma ranges roughly -30 to 30 for normal tilt. */
-    this.tiltY = e.gamma ?? 0; // steering axis (left/right)
-    this.tiltX = e.beta  ?? 0; // pitch axis (forward/back)
-  }
-
-  /**
-   * Get the desired jet turn rate from current tilt.
-   * Returns a value in radians/second to ADD to jet angle.
-   */
+  /* ─────────────────────────────────────────
+     TURN RATE  (called every frame by engine)
+  ───────────────────────────────────────── */
   getTurnRate() {
-    /* Virtual joystick overrides gyro if being used */
-    if (this._joystickActive) {
-      return this._joystickTurn * Config.JET_TURN_SPEED * (this.sensitivity / Config.DEFAULT_SENSITIVITY);
-    }
-    if (!this.gyroEnabled) return 0;
-    /* In landscape mode, gamma (tiltY) drives left/right. */
-    let raw = this.tiltY; // degrees
-    if (this.invertY) raw = -raw;
-    /* Deadzone ±3° to avoid drift */
-    if (Math.abs(raw) < 3) return 0;
-    /* Normalise to -1..1 range over ±45° */
-    const norm = Math.max(-1, Math.min(1, raw / 45));
-    return norm * Config.JET_TURN_SPEED * (this.sensitivity / Config.DEFAULT_SENSITIVITY);
+    if (!this._joystickActive) return 0;
+    const sens = this.sensitivity / Config.DEFAULT_SENSITIVITY;
+    return this._joystickTurn * Config.JET_TURN_SPEED * sens;
   }
 
-  stop() {
-    window.removeEventListener('deviceorientation', this._bindOrientationEvent, true);
-    this.gyroEnabled = false;
-  }
-
-  /* ──────────────────────────────────────────────────────
-     VIRTUAL JOYSTICK  (shown when gyro unavailable)
-  ────────────────────────────────────────────────────── */
+  /* ─────────────────────────────────────────
+     JOYSTICK SETUP  (call once on game start)
+  ───────────────────────────────────────── */
   setupJoystick() {
-    const stick = document.getElementById('joystick-zone');
-    if (!stick) return;
+    const zone = document.getElementById('joystick-zone');
+    if (!zone) return;
+    zone.classList.remove('hidden');
 
-    /* Show joystick zone always — hide if gyro ends up working */
-    stick.classList.remove('hidden');
+    const DEAD  = 8;   // px deadzone radius
+    const MAX   = 52;  // px max travel from base
 
-    const onStart = (id, cx, cy) => {
+    const start = (id, cx, cy) => {
       if (this._joystickTouchId !== null) return;
       this._joystickTouchId = id;
       this._joystickBaseX   = cx;
       this._joystickBaseY   = cy;
-      this._joystickActive  = true;
-      this._updateStickVisual(0, 0);
-      stick.classList.add('active');
+      this._joystickActive  = false; // not active until outside deadzone
+      this._joystickTurn    = 0;
+      this._setKnob(0, 0);
+      zone.classList.add('active');
     };
-    const onMove = (id, cx, cy) => {
+
+    const move = (id, cx, cy) => {
       if (this._joystickTouchId !== id) return;
-      const dx  = cx - this._joystickBaseX;
-      const dy  = cy - this._joystickBaseY;
-      const max = 55; // px travel
-      /* Horizontal = steer, vertical = ignored (jet always moves forward) */
-      this._joystickTurn = Math.max(-1, Math.min(1, dx / max));
-      this._updateStickVisual(
-        Math.max(-max, Math.min(max, dx)),
-        Math.max(-max, Math.min(max, dy))
-      );
+      const dx = cx - this._joystickBaseX;
+      const dy = cy - this._joystickBaseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < DEAD) {
+        this._joystickActive = false;
+        this._joystickTurn   = 0;
+        this._setKnob(0, 0);
+        return;
+      }
+
+      this._joystickActive = true;
+      /* Clamp knob travel to MAX radius */
+      const clampedDX = Math.max(-MAX, Math.min(MAX, dx));
+      const clampedDY = Math.max(-MAX, Math.min(MAX, dy));
+      /* Only horizontal axis steers the jet */
+      this._joystickTurn = Math.max(-1, Math.min(1, dx / MAX));
+      this._setKnob(clampedDX, clampedDY);
     };
-    const onEnd = (id) => {
+
+    const end = (id) => {
       if (this._joystickTouchId !== id) return;
       this._joystickTouchId = null;
       this._joystickActive  = false;
       this._joystickTurn    = 0;
-      this._updateStickVisual(0, 0);
-      stick.classList.remove('active');
+      this._setKnob(0, 0);
+      zone.classList.remove('active');
     };
 
-    stick.addEventListener('touchstart', (e) => {
+    /* Touch events */
+    zone.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const t = e.changedTouches[0];
-      onStart(t.identifier, t.clientX, t.clientY);
+      start(t.identifier, t.clientX, t.clientY);
     }, { passive: false });
-    stick.addEventListener('touchmove', (e) => {
+
+    zone.addEventListener('touchmove', (e) => {
       e.preventDefault();
-      for (const t of e.changedTouches) onMove(t.identifier, t.clientX, t.clientY);
+      for (const t of e.changedTouches) move(t.identifier, t.clientX, t.clientY);
     }, { passive: false });
-    stick.addEventListener('touchend', (e) => {
-      for (const t of e.changedTouches) onEnd(t.identifier);
+
+    zone.addEventListener('touchend', (e) => {
+      for (const t of e.changedTouches) end(t.identifier);
     });
-    stick.addEventListener('touchcancel', (e) => {
-      for (const t of e.changedTouches) onEnd(t.identifier);
+    zone.addEventListener('touchcancel', (e) => {
+      for (const t of e.changedTouches) end(t.identifier);
     });
 
     /* Mouse fallback for desktop testing */
-    let mouseDown = false;
-    stick.addEventListener('mousedown', (e) => { mouseDown = true; onStart('mouse', e.clientX, e.clientY); });
-    window.addEventListener('mousemove', (e) => { if (mouseDown) onMove('mouse', e.clientX, e.clientY); });
-    window.addEventListener('mouseup',   ()  => { if (mouseDown) { mouseDown = false; onEnd('mouse'); } });
+    let down = false;
+    zone.addEventListener('mousedown', (e) => {
+      down = true;
+      start('mouse', e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (down) move('mouse', e.clientX, e.clientY);
+    });
+    window.addEventListener('mouseup', () => {
+      if (down) { down = false; end('mouse'); }
+    });
   }
 
-  _updateStickVisual(dx, dy) {
+  _setKnob(dx, dy) {
     const knob = document.getElementById('joystick-knob');
     if (knob) knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
   }
 
-  hideJoystick() {
-    const stick = document.getElementById('joystick-zone');
-    if (stick) stick.classList.add('hidden');
-  }
-
-  /* ──────────────────────────────────────────────────────
-     TOUCH BUTTONS
-  ────────────────────────────────────────────────────── */
-
-  /**
-   * Attach touch/mouse listeners to the fire & missile buttons.
-   * Call once when the HUD is visible.
-   */
+  /* ─────────────────────────────────────────
+     ACTION BUTTONS  (fire, missile, power-up)
+  ───────────────────────────────────────── */
   bindButtons() {
-    const fireBtn    = document.getElementById('btn-fire');
-    const missileBtn = document.getElementById('btn-missile');
-
-    /* === FIRE button — touchstart begins continuous fire === */
-    fireBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (!this.layoutMode) {
-        this.firing = true;
-        fireBtn.classList.add('pressed');
-      }
-    }, { passive: false });
-
-    fireBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      this.firing = false;
-      fireBtn.classList.remove('pressed');
-    }, { passive: false });
-
-    /* Mouse fallback (for desktop testing) */
-    fireBtn.addEventListener('mousedown', () => { if (!this.layoutMode) this.firing = true;  });
-    fireBtn.addEventListener('mouseup',   () => { this.firing = false; });
-
-    /* === MISSILE button — single tap, then cooldown === */
-    missileBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (!this.layoutMode && this.onMissile) this.onMissile();
-    }, { passive: false });
-
-    missileBtn.addEventListener('mousedown', () => {
-      if (!this.layoutMode && this.onMissile) this.onMissile();
-    });
-
-    /* === Draggable buttons === */
-    this._setupDrag(fireBtn);
-    this._setupDrag(missileBtn);
-
-    /* Restore saved positions */
+    this._bindFireBtn();
+    this._bindMissileBtn();
+    this._bindPowerUpBtn();
+    this._setupDrag(document.getElementById('btn-fire'));
+    this._setupDrag(document.getElementById('btn-missile'));
     this._restorePositions();
   }
 
-  /* ──────────────────────────────────────────────────────
-     DRAGGABLE HUD
-  ────────────────────────────────────────────────────── */
+  _bindFireBtn() {
+    const btn = document.getElementById('btn-fire');
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (this.layoutMode) return;
+      this.firing = true;
+      btn.classList.add('pressed');
+    }, { passive: false });
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.firing = false;
+      btn.classList.remove('pressed');
+    }, { passive: false });
+    btn.addEventListener('mousedown', () => { if (!this.layoutMode) this.firing = true; });
+    btn.addEventListener('mouseup',   () => { this.firing = false; });
+  }
 
+  _bindMissileBtn() {
+    const btn = document.getElementById('btn-missile');
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (!this.layoutMode && this.onMissile) this.onMissile();
+    }, { passive: false });
+    btn.addEventListener('mousedown', () => {
+      if (!this.layoutMode && this.onMissile) this.onMissile();
+    });
+  }
+
+  _bindPowerUpBtn() {
+    const btn = document.getElementById('btn-powerup');
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (this.onPowerUp) this.onPowerUp();
+    }, { passive: false });
+    btn.addEventListener('mousedown', () => {
+      if (this.onPowerUp) this.onPowerUp();
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     DRAGGABLE HUD BUTTONS
+  ───────────────────────────────────────── */
   toggleLayoutMode() {
     this.layoutMode = !this.layoutMode;
-    const hud = document.getElementById('hud');
-    if (this.layoutMode) {
-      hud.classList.add('layout-mode');
-    } else {
-      hud.classList.remove('layout-mode');
-      this._savePositions();
-    }
+    document.getElementById('hud').classList.toggle('layout-mode', this.layoutMode);
+    if (!this.layoutMode) this._savePositions();
     return this.layoutMode;
   }
 
   _setupDrag(el) {
-    const onStart = (clientX, clientY) => {
+    if (!el) return;
+    const onStart = (cx, cy) => {
       if (!this.layoutMode) return;
-      this._dragBtn = el;
-      const rect = el.getBoundingClientRect();
-      this._dragOffX = clientX - rect.left;
-      this._dragOffY = clientY - rect.top;
+      this._dragBtn  = el;
+      const r = el.getBoundingClientRect();
+      this._dragOffX = cx - r.left;
+      this._dragOffY = cy - r.top;
       el.style.transition = 'none';
     };
-    const onMove = (clientX, clientY) => {
+    const onMove = (cx, cy) => {
       if (this._dragBtn !== el) return;
-      /* Position relative to viewport — convert to "bottom/right" style */
       const vw = window.innerWidth, vh = window.innerHeight;
-      let newLeft = clientX - this._dragOffX;
-      let newTop  = clientY - this._dragOffY;
-      /* Clamp to screen */
-      newLeft = Math.max(0, Math.min(vw - el.offsetWidth,  newLeft));
-      newTop  = Math.max(0, Math.min(vh - el.offsetHeight, newTop));
-      el.style.left   = newLeft + 'px';
-      el.style.top    = newTop  + 'px';
+      el.style.left   = Math.max(0, Math.min(vw - el.offsetWidth,  cx - this._dragOffX)) + 'px';
+      el.style.top    = Math.max(0, Math.min(vh - el.offsetHeight, cy - this._dragOffY)) + 'px';
       el.style.right  = 'auto';
       el.style.bottom = 'auto';
     };
     const onEnd = () => { this._dragBtn = null; };
 
-    /* Touch */
     el.addEventListener('touchstart', (e) => { if (this.layoutMode) { e.preventDefault(); onStart(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
     el.addEventListener('touchmove',  (e) => { if (this._dragBtn === el) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
-    el.addEventListener('touchend',   onEnd);
-    /* Mouse */
+    el.addEventListener('touchend', onEnd);
     el.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
     window.addEventListener('mousemove', (e) => { if (this._dragBtn === el) onMove(e.clientX, e.clientY); });
-    window.addEventListener('mouseup',   onEnd);
+    window.addEventListener('mouseup', onEnd);
   }
 
   _savePositions() {
-    const save = (id) => {
+    ['btn-fire','btn-missile'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      const rect = el.getBoundingClientRect();
-      localStorage.setItem(`aero_btn_${id}`, JSON.stringify({ left: rect.left, top: rect.top }));
-    };
-    save('btn-fire');
-    save('btn-missile');
+      const r = el.getBoundingClientRect();
+      localStorage.setItem(`aero_btn_${id}`, JSON.stringify({ left: r.left, top: r.top }));
+    });
   }
 
   _restorePositions() {
-    const restore = (id) => {
+    ['btn-fire','btn-missile'].forEach(id => {
       const raw = localStorage.getItem(`aero_btn_${id}`);
       if (!raw) return;
       try {
         const pos = JSON.parse(raw);
         const el  = document.getElementById(id);
         if (!el) return;
-        const vw = window.innerWidth, vh = window.innerHeight;
-        el.style.left   = Math.min(pos.left, vw - el.offsetWidth)  + 'px';
-        el.style.top    = Math.min(pos.top,  vh - el.offsetHeight) + 'px';
+        el.style.left   = Math.min(pos.left, window.innerWidth  - el.offsetWidth)  + 'px';
+        el.style.top    = Math.min(pos.top,  window.innerHeight - el.offsetHeight) + 'px';
         el.style.right  = 'auto';
         el.style.bottom = 'auto';
       } catch(_) {}
-    };
-    restore('btn-fire');
-    restore('btn-missile');
+    });
   }
 
   resetPositions() {
-    localStorage.removeItem('aero_btn_btn-fire');
-    localStorage.removeItem('aero_btn_btn-missile');
-    const fireBtn    = document.getElementById('btn-fire');
-    const missileBtn = document.getElementById('btn-missile');
-    if (fireBtn)    { fireBtn.style.cssText    = ''; }
-    if (missileBtn) { missileBtn.style.cssText = ''; }
+    ['btn-fire','btn-missile'].forEach(id => {
+      localStorage.removeItem(`aero_btn_${id}`);
+      const el = document.getElementById(id);
+      if (el) el.style.cssText = '';
+    });
   }
-
-  /* ──────────────────────────────────────────────────────
-     SETTINGS PERSISTENCE
-  ────────────────────────────────────────────────────── */
 
   setSensitivity(v) {
     this.sensitivity = parseFloat(v);
     localStorage.setItem('aero_sensitivity', v);
   }
-  setInvertY(v) {
-    this.invertY = v;
-    localStorage.setItem('aero_invertY', String(v));
-  }
+
+  stop() { this.firing = false; }
 }
