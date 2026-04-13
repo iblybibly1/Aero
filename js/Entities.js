@@ -134,8 +134,9 @@ class Jet {
     this.respawnTimer = Config.RESPAWN_TIME;
     this.deaths++;
     if (killer && killer !== this) { killer.score++; killer.kills++; }
-    /* Remove power-ups on death */
+    /* Clear all power-up states on death */
     this.hasShield = this.hasRapidFire = this.hasSpeedBoost = false;
+    this.pendingPowerUp = null;
   }
 
   /* ── Respawn at random world edge ── */

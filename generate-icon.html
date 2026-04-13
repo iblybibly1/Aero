@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<!-- Open this file in a browser, right-click the canvas, Save Image As icon.png -->
+<canvas id="c" width="192" height="192"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+ctx.fillStyle = '#060d1a'; ctx.fillRect(0,0,192,192);
+ctx.save(); ctx.translate(96,96); ctx.scale(3.5,3.5);
+ctx.fillStyle='#4fc3f7';
+ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(-15,15); ctx.lineTo(0,8); ctx.lineTo(15,15); ctx.closePath(); ctx.fill();
+ctx.restore();
+</script>

@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Aero — Air Combat</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -36,7 +37,11 @@
         <button id="btn-singleplayer" class="btn btn-accent">Solo vs AI</button>
         <button id="btn-settings-menu" class="btn btn-outline">Settings</button>
       </div>
-      <p class="version">v1.0 — Tilt to fly. Tap to fire.</p>
+      <p class="version">v1.0 — Drag joystick to fly. Tap to fire.</p>
+      <div id="add-to-home-banner" class="add-to-home-banner hidden">
+        📲 For fullscreen: tap <strong>Share →</strong> then <strong>"Add to Home Screen"</strong>
+        <button onclick="document.getElementById('add-to-home-banner').classList.add('hidden')">✕</button>
+      </div>
     </div>
   </div>
 
@@ -180,10 +185,10 @@
         <small id="missile-cooldown-text">READY</small>
       </button>
 
-      <!-- POWER-UP button — only visible when a power-up is held -->
+      <!-- POWER-UP button — center-bottom, only visible when held/active -->
       <button id="btn-powerup" class="hud-action-btn powerup-btn hidden">
         <span id="powerup-icon">⚡</span>
-        <small id="powerup-timer-text">5s</small>
+        <small id="powerup-timer-text">USE!</small>
       </button>
 
       <!-- Joystick (always visible, left side) -->
@@ -193,7 +198,7 @@
         <span id="joystick-label">STEER</span>
       </div>
 
-      <!-- Settings gear (in-game) -->
+      <!-- Settings gear — top-center -->
       <button id="btn-pause-settings" class="hud-gear-btn">⚙</button>
     </div>
 

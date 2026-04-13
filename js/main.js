@@ -24,9 +24,25 @@ let isHost         = false;
 ═══════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
   input = new InputHandler();
-  window.input = input; // expose globally for inline onclick gyro handler
+  window.input = input;
   ui    = new UIManager(input);
   ui.showScreen('menu');
+
+  /* Show "Add to Home Screen" tip on iOS Safari (not in standalone mode) */
+  const isIOS        = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  if (isIOS && !isStandalone) {
+    document.getElementById('add-to-home-banner')?.classList.remove('hidden');
+  }
+  /* Android: attempt fullscreen when user taps anywhere first time */
+  if (!isIOS) {
+    document.addEventListener('touchstart', function _fs() {
+      document.removeEventListener('touchstart', _fs);
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' });
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }, { once: true });
+  }
 
   _bindMenuButtons();
   _bindLobbyButtons();
@@ -350,7 +366,12 @@ function _startGame(playerInfo, netManager, opts) {
   /* Engine callback when killer earns a power-up */
   engine.onPowerUpEarned = () => {
     const btn = document.getElementById('btn-powerup');
-    if (btn) { btn.style.animation = 'none'; void btn.offsetWidth; btn.style.animation = 'powerup-earned 0.5s ease 3'; }
+    if (!btn) return;
+    btn.classList.remove('hidden');
+    /* Pulse animation to alert player */
+    btn.style.animation = 'none';
+    void btn.offsetWidth;
+    btn.style.animation = 'powerup-earned 0.5s ease 3';
   };
 
   /* Bind all buttons + joystick */

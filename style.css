@@ -409,21 +409,31 @@ input[type="range"] {
 }
 .missile-btn small { font-size: 0.5rem; }
 
-/* Power-up button — appears above missile when earned */
+/* Power-up button — bottom centre, hard to miss */
 .powerup-btn {
-  bottom: calc(env(safe-area-inset-bottom, 20px) + 220px);
-  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86px;
+  height: 86px;
   background: radial-gradient(circle, #9c27b0, #6a1b9a);
-  box-shadow: 0 0 20px rgba(156, 39, 176, 0.7);
-  width: 72px;
-  height: 72px;
+  box-shadow: 0 0 28px rgba(156, 39, 176, 0.85);
+  border: 2px solid rgba(255,255,255,0.25);
+  font-size: 2rem;
+  flex-direction: column;
 }
-.powerup-btn small { font-size: 0.6rem; font-weight: 900; color: #fff; }
+.powerup-btn small {
+  font-size: 0.6rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.05em;
+  margin-top: -4px;
+}
 
 @keyframes powerup-earned {
-  0%   { transform: scale(1);    box-shadow: 0 0 20px currentColor; }
-  50%  { transform: scale(1.25); box-shadow: 0 0 50px currentColor; }
-  100% { transform: scale(1);    box-shadow: 0 0 20px currentColor; }
+  0%   { transform: translateX(-50%) scale(1);    }
+  50%  { transform: translateX(-50%) scale(1.3);  }
+  100% { transform: translateX(-50%) scale(1);    }
 }
 
 /* Cooldown ring (SVG-like using conic gradient) */
@@ -436,22 +446,24 @@ input[type="range"] {
   transition: background 0.1s linear;
 }
 
-/* Gear button */
+/* Gear button — top centre so it never overlaps joystick or fire buttons */
 #btn-pause-settings {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
-  left: 20px;
-  width: 44px;
-  height: 44px;
+  top: env(safe-area-inset-top, 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.45);
   color: #aab;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 /* HUD layout mode (drag mode) visual */
@@ -518,6 +530,33 @@ input[type="range"] {
 
 /* ── Error message ── */
 .error-msg { color: #e74c3c; font-size: 0.8rem; text-align: center; min-height: 1em; }
+
+/* ── Add-to-home-screen banner ── */
+.add-to-home-banner {
+  margin-top: 1rem;
+  background: rgba(79,195,247,0.15);
+  border: 1px solid rgba(79,195,247,0.4);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: #cde;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.add-to-home-banner button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #aab;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  min-width: auto;
+}
 
 /* ── Utility ── */
 .hidden { display: none !important; }
